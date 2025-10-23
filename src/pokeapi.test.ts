@@ -1,27 +1,36 @@
-import { describe, it, expect } from "vitest";
-import { Cache } from "./pokecache.js";
+import { createInterface, type Interface } from "readline";
+import { getCommands } from "./commands.js";
+import { PokeAPI } from "./pokeapi.js";
+import type { Pokemon } from "./pokeapi.js";
 
-describe("Cache", () => {
+export type CLICommand = {
+  name: string;
+  description: string;
+  callback: (state: State, ...args: string[]) => Promise<void>;
+};
 
-  it("should store and retrieve values", () => {
-    const cache = new Cache(1000); // 1 second interval
-    cache.add("key1", { name: "Pikachu" });
+export type State = {
+  readline: Interface;
+  commands: Record<string, CLICommand>;
+  pokeAPI: PokeAPI;
+  nextLocationsURL: string;
+  prevLocationsURL: string;
+  caughtPokemon: Record<string, Pokemon>;
+};
 
-    const cached = cache.get<{ name: string }>("key1");
-    expect(cached).toBeDefined();
-    expect(cached?.val.name).toBe("Pikachu");
+export function initState(cacheInterval: number) {
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    prompt: "pokedex > ",
   });
 
-  it("should delete old entries after interval", async () => {
-    const cache = new Cache(50); // 50ms interval for fast test
-    cache.add("key2", { name: "Bulbasaur" });
-
-    // Wait 60ms to exceed interval
-    await new Promise((resolve) => setTimeout(resolve, 60));
-    cache.reap(); // Manually call reap
-
-    const cached = cache.get<{ name: string }>("key2");
-    expect(cached).toBeUndefined();
-  });
-
-});
+  return {
+    readline: rl,
+    commands: getCommands(),
+    pokeAPI: new PokeAPI(cacheInterval),
+    nextLocationsURL: "",
+    prevLocationsURL: "",
+    caughtPokemon: {},
+  };
+}

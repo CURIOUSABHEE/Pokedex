@@ -1,30 +1,16 @@
-import { PokeAPI } from "./pokeapi.js";
-import { State } from "./state.js";
+import type { State } from "./state.js";
 
-const api = new PokeAPI();
+export async function commandExplore(state: State, ...args: string[]) {
+  if (args.length !== 1) {
+    throw new Error("you must provide a location name");
+  }
 
-export async function commandExplore(state: State, args: string[]) {
-    const locationName = args[0];
-    if (!locationName) {
-        console.log("Please provide a location area name.");
-        return state.rl.prompt();
-    }
+  const name = args[0];
+  const location = await state.pokeAPI.fetchLocation(name);
 
-    try {
-        const resp = await api.fetchPokemons(locationName);
-
-        if (!resp.pokemon_encounters || resp.pokemon_encounters.length === 0) {
-            console.log("No Pokémon found in this area.");
-        } else {
-            console.log(`Exploring ${locationName}...`);
-            console.log("Found Pokémon:");
-            for (const encounter of resp.pokemon_encounters) {
-                console.log(` - ${encounter.pokemon.name}`);
-            }
-        }
-    } catch (err:any) {
-        console.log("Error fetching location area:", err.message);
-    }
-
-    state.rl.prompt();
+  console.log(`Exploring ${name}...`);
+  console.log("Found Pokemon:");
+  for (const enc of location.pokemon_encounters) {
+    console.log(` - ${enc.pokemon.name}`);
+  }
 }

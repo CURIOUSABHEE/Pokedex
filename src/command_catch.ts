@@ -1,35 +1,22 @@
-import { PokeAPI } from "./pokeapi.js";
-import { State } from "./state.js";
+import type { State } from "./state.js";
 
-const api = new PokeAPI();
+export async function commandCatch(state: State, ...args: string[]) {
+  if (args.length !== 1) {
+    throw new Error("you must provide a pokemon name");
+  }
 
-export async function commandCatch(state: State, args: string[]) {
-    const pokemonName = args[0];
-    if (!pokemonName) {
-        console.log("Please provide a pokemon name.");
-        return state.rl.prompt();
-    }
+  const name = args[0];
+  const pokemon = await state.pokeAPI.fetchPokemon(name);
 
-    try {
-        const resp = await api.fetchPokemon(pokemonName);
+  console.log(`Throwing a Pokeball at ${pokemon.name}...`);
 
-        console.log(`Throwing a Pokeball at ${pokemonName}...`);
+  const res = Math.floor(Math.random() * pokemon.base_experience);
+  if (res > 40) {
+    console.log(`${pokemon.name} escaped!`);
+    return;
+  }
 
-        // Calculate catch chance (higher base_experience = harder to catch)
-        const maxExp = 500; // adjust for balance
-        const catchChance = Math.max(0.1, 1 - resp.base_experience / maxExp);
-
-        if (Math.random() < catchChance) {
-            console.log(`${pokemonName} was caught!`);
-
-            // Add to user's Pokedex
-            state.pokedex[pokemonName] = resp;
-        } else {
-            console.log(`${pokemonName} escaped!`);
-        }
-    } catch (err: any) {
-        console.log("Error fetching Pokemon:", err.message);
-    }
-
-    state.rl.prompt();
+  console.log(`${pokemon.name} was caught!`);
+  console.log("You may now inspect it with the inspect command.");
+  state.caughtPokemon[pokemon.name] = pokemon;
 }

@@ -1,26 +1,34 @@
-import type { State } from "./state.js";
+import { State } from "./state.js";
 
-export function startREPL(state: State) {
-    const { rl, commandRegistry } = state;
+export async function startREPL(state: State) {
+    state.readline.prompt();
 
-    rl.prompt();
-
-    rl.on("line", (input: string) => {
-        // const cleanedInput = cleanInput(input);
-
-        // ignore empty input
-        // if (cleanedInput.length === 0) {
-        //     rl.prompt();
-        //     return;
-        // }
-
-        const [commandName, ...args] = input.trim().split(" ");
-        const command = commandRegistry[commandName];
-        if (command) {
-            command.callback(state, args);
+    state.readline.on("line", async (input) => {
+        const words = cleanInput(input);
+        if (words.length === 0) {
+            state.readline.prompt();
+            return;
         }
 
-        rl.prompt();
+        const commandName = words[0];
+        const args = words.slice(1);
+
+        const cmd = state.commands[commandName];
+        if (!cmd) {
+            console.log(
+                `Unknown command: "${commandName}". Type "help" for a list of commands.`,
+            );
+            state.readline.prompt();
+            return;
+        }
+
+        try {
+            await cmd.callback(state, ...args);
+        } catch (e) {
+            console.log((e as Error).message);
+        }
+
+        state.readline.prompt();
     });
 }
 

@@ -1,54 +1,53 @@
-
 type CacheEntry<T> = {
-    createdAt: number,
-    val: T
-}
+    createdAt: number;
+    val: T;
+};
 
 export class Cache {
     #cache = new Map<string, CacheEntry<any>>();
     #reapIntervalId: NodeJS.Timeout | undefined = undefined;
     #interval: number;
 
-    constructor(intervalValue:number) {
-    if (typeof intervalValue !== 'number' || intervalValue < 0) {
-      throw new Error('intervalValue must be a non-negative number.');
+    constructor(interval: number) {
+        this.#interval = interval;
+        this.#startReapLoop();
     }
-    this.#interval = intervalValue; // Assign the parameter value to the private field
-    this.startReapLoop(); // Call the method to start the loop
-  }
 
-    add<T>(key: string, val:T){
+    add<T>(key: string, value: T) {
         const entry: CacheEntry<T> = {
             createdAt: Date.now(),
-            val
+            val: value,
+        };
+        this.#cache.set(key, entry);
+    }
+
+    get<T>(key: string) {
+        const entry = this.#cache.get(key);
+        if (entry !== undefined) {
+            return entry.val as T;
         }
-        this.#cache.set(key, entry)
-        
+        return undefined;
     }
 
-    get<T>(key: string): CacheEntry<T> | undefined {
-        return this.#cache.get(key);
+    #startReapLoop() {
+        this.#reapIntervalId = setInterval(() => {
+            this.#reap();
+        }, this.#interval);
     }
 
-    reap(){
+    #reap() {
         const now = Date.now();
-        for (const [key, entry] of this.#cache.entries()) {
-            if (entry.createdAt < now - this.#interval) {
+        for (const [key, entry] of this.#cache) {
+            if (now - entry.createdAt > this.#interval) {
                 this.#cache.delete(key);
             }
         }
     }
 
-    startReapLoop(){
-        this.#reapIntervalId = setInterval(()=>{
-            this.reap() 
-        }, this.#interval)
-    }
-
-    stopReapLoop(){
-        if (this.#reapIntervalId){
-            clearInterval(this.#reapIntervalId)
-            this.#reapIntervalId = undefined
+    stopReapLoop() {
+        if (this.#reapIntervalId) {
+            clearInterval(this.#reapIntervalId);
+            this.#reapIntervalId = undefined;
         }
     }
 }
